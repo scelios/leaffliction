@@ -41,6 +41,9 @@ fclean	: clean
 exec	: 
 	docker exec -it python /bin/bash
 
+.PHONY: data
+data :
+	wget -O file/data/leaves.zip https://cdn.intra.42.fr/document/document/39824/leaves.zip
 
 # ---------------------------------------------------------------------------- #
 #                                     UTILS                                    #
