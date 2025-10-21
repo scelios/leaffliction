@@ -46,6 +46,19 @@ exec	: build
 	docker exec -it python /bin/bash
 
 .PHONY: re
+re : fclean all
+
+.PHONY: images
+images :
+	mkdir -p file/images
+	wget -O file/images/leaves.zip https://cdn.intra.42.fr/document/document/39824/leaves.zip
+	unzip file/images/leaves.zip -d file/images/
+	rm -r file/images/leaves.zip
+	mkdir file/images/Apple
+	mkdir file/images/Grape
+	mv file/images/images/Apple* file/images/Apple
+	mv file/images/images/Grape* file/images/Grape
+	rm -r file/images/images
 
 # ---------------------------------------------------------------------------- #
 #                                     UTILS                                    #
