@@ -8,7 +8,8 @@ services:
       - ./file:/usr/app
       - /tmp/.X11-unix:/tmp/.X11-unix
     environment:
-      - DISPLAY=${DISPLAY} 
+      - DISPLAY=${DISPLAY}
+      - MPLBACKEND=TkAgg
     networks:
       - leafliction
     working_dir: /usr/app

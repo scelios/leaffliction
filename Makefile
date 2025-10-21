@@ -19,7 +19,7 @@ RESET="\033[m"
 
 .PHONY: all
 all	:
-	docker compose up --build
+	docker compose up --build -d && docker exec -it python /bin/bash
 
 .PHONY: clean
 clean	:
@@ -37,10 +37,15 @@ fclean	: clean
 	-docker volume rm $(shell docker volume ls -q) 2>/dev/null
 	-docker network rm $(shell docker network ls -q) 2>/dev/null
 
+.PHONY: build
+build	:
+	docker compose up --build -d
+
 .PHONY: exec
-exec	: 
+exec	: build
 	docker exec -it python /bin/bash
 
+.PHONY: re
 
 # ---------------------------------------------------------------------------- #
 #                                     UTILS                                    #
