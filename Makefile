@@ -23,7 +23,7 @@ all	:
 
 .PHONY: clean
 clean	:
-	docker compose down
+	docker compose down -t0
 
 .PHONY: prune
 prune	: clean
