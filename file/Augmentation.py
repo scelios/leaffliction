@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import sys
 import argparse
@@ -91,7 +93,7 @@ def augment(directory, counts, PathAugmentedImages):
 
     # avoid processing the output folder if it's inside the source directory
     out_basename = os.path.basename(os.path.normpath(PathAugmentedImages))
-
+    max_count = max(counts.values())
     for subdir in os.listdir(directory):
         if subdir == out_basename:
             continue
@@ -108,14 +110,18 @@ def augment(directory, counts, PathAugmentedImages):
                 if not os.path.isfile(file_path):
                     continue
 
-                # if the folder has at least the same number of images than the higher count of the original breakdown
-                if counts[subdir] >= max(counts.values()):
-                    print(f"  Skipping further augmentation for class '{subdir}' (has {counts[subdir]} images).")
-                    break
-                
                 # read image
                 image = io.imread(file_path)
 
+                # save original copy
+                save_safe(image, filename, aug_subdir)
+
+                # if the folder has at least the same number of images than the higher count of the original breakdown
+                if counts[subdir] >= max_count:
+                    continue
+                
+                counts[subdir] = counts[subdir] + 6  # each image generates 6 new images
+                
 
                 name_base = os.path.splitext(filename)[0]
                 name_ext = os.path.splitext(filename)[1] or '.png'
