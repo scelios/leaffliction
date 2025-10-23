@@ -8,9 +8,10 @@ matplotlib.use('TkAgg')  # select a GUI backend BEFORE importing pyplot
 import matplotlib.pyplot as plt
 from skimage import io, exposure
 from skimage.util import img_as_ubyte
-from skimage.transform import rotate, AffineTransform, warp, rescale, resize, downscale_local_mean, ProjectiveTransform
+from skimage.transform import rotate, AffineTransform, warp,ProjectiveTransform
 import numpy as np
 import warnings
+import Utils
 # suppress skimage low-contrast UserWarning
 warnings.filterwarnings("ignore", message=".*low contrast.*")
 
@@ -84,29 +85,34 @@ def save_safe(img, dst_name, aug_subdir):
     io.imsave(dst_path, img)
 
 def modifyImage(image, filename, aug_subdir):
+    # save images as tuple of image and filename
+    imageSet = []
+
     name_base = os.path.splitext(filename)[0]
     name_ext = os.path.splitext(filename)[1] or '.png'
 
     # flip
     flipped = image[:, ::-1]
-    save_safe(flipped, f"{name_base}_Flip{name_ext}", aug_subdir)
+    # also add name to imageSet
+    imageSet.append((flipped, f"{name_base}_Flip{name_ext}"))
+
 
     # skew
     skewed = warp(image, AffineTransform(shear=0.2))
-    save_safe(skewed, f"{name_base}_Skew{name_ext}", aug_subdir)
+    imageSet.append((skewed, f"{name_base}_Skew{name_ext}"))
 
     # shear
     sheared = warp(image, AffineTransform(shear=0.3))
-    save_safe(sheared, f"{name_base}_Shear{name_ext}", aug_subdir)
+    imageSet.append((sheared, f"{name_base}_Shear{name_ext}"))
 
     # rotate but keep full image (expand canvas)
     angle = np.random.uniform(-30, 30)  # random angle in degrees
     rotated = rotate(image, angle=angle, resize=True, preserve_range=True)
-    save_safe(rotated, f"{name_base}_Rot{name_ext}", aug_subdir)
+    imageSet.append((rotated, f"{name_base}_Rot{name_ext}"))
 
     
     skewed = perspective_transform(image, max_shift=0.15)
-    save_safe(skewed, f"{name_base}_Skew{name_ext}", aug_subdir)
+    imageSet.append((skewed, f"{name_base}_Skew{name_ext}"))
 
     # crop: reduce image to 80% of original (i.e. crop 20%) centered
     h, w = image.shape[:2]
@@ -115,12 +121,13 @@ def modifyImage(image, filename, aug_subdir):
     y0 = max(0, (h - ch) // 2)
     x0 = max(0, (w - cw) // 2)
     cropped = image[y0:y0+ch, x0:x0+cw]
-    save_safe(cropped, f"{name_base}_Crop{name_ext}", aug_subdir)
+    imageSet.append((cropped, f"{name_base}_Crop{name_ext}"))
 
     # distortion / noise
     distorted = image.astype(np.float64) + 0.5 * image.std() * np.random.random(image.shape)
-    save_safe(distorted, f"{name_base}_Distortion{name_ext}", aug_subdir)
+    imageSet.append((distorted, f"{name_base}_Distortion{name_ext}"))
 
+    return imageSet
 
 def augmentDirectory(directory, counts, PathAugmentedImages):
     if not os.path.exists(directory):
@@ -192,14 +199,13 @@ def main():
 
         # if it is a directory
         if os.path.isdir(args.path):
-            # if --output not provided, use <path>/augmented
-            output_dir = args.output if args.output else os.path.join(args.path, "augmented")
-            imagesPerFolder = getNbImagesPerFolder(args.path)
-            augmentDirectory(args.path, imagesPerFolder, output_dir)
+            # if --output not provided, use <path>/transformed
+            output_dir = args.output if args.output else os.path.join(args.path, "transformed")
+            Utils.transformDirectory(args.path, output_dir, modifyImage)
         else:
-            # if --output not provided, use <parent_of_path>/augmented
-            output_dir = args.output if args.output else os.path.join(os.path.dirname(args.path), "augmented")
-            augmentFile(args.path, os.path.basename(args.path), output_dir)
+            # if --output not provided, use <parent_of_path>/transformed
+            output_dir = args.output if args.output else os.path.join(os.path.dirname(args.path), "transformed")
+            Utils.transformFile(args.path, os.path.basename(args.path), output_dir, modifyImage)
     except Exception as e:
         print(f"Error: {e}")
         sys.exit(1)
