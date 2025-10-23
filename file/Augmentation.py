@@ -83,7 +83,46 @@ def save_safe(img, dst_name, aug_subdir):
         img = img_as_ubyte(img)
     io.imsave(dst_path, img)
 
-def augment(directory, counts, PathAugmentedImages):
+def modifyImage(image, filename, aug_subdir):
+    name_base = os.path.splitext(filename)[0]
+    name_ext = os.path.splitext(filename)[1] or '.png'
+
+    # flip
+    flipped = image[:, ::-1]
+    save_safe(flipped, f"{name_base}_Flip{name_ext}", aug_subdir)
+
+    # skew
+    skewed = warp(image, AffineTransform(shear=0.2))
+    save_safe(skewed, f"{name_base}_Skew{name_ext}", aug_subdir)
+
+    # shear
+    sheared = warp(image, AffineTransform(shear=0.3))
+    save_safe(sheared, f"{name_base}_Shear{name_ext}", aug_subdir)
+
+    # rotate but keep full image (expand canvas)
+    angle = np.random.uniform(-30, 30)  # random angle in degrees
+    rotated = rotate(image, angle=angle, resize=True, preserve_range=True)
+    save_safe(rotated, f"{name_base}_Rot{name_ext}", aug_subdir)
+
+    
+    skewed = perspective_transform(image, max_shift=0.15)
+    save_safe(skewed, f"{name_base}_Skew{name_ext}", aug_subdir)
+
+    # crop: reduce image to 80% of original (i.e. crop 20%) centered
+    h, w = image.shape[:2]
+    ch = int(h * 0.8)
+    cw = int(w * 0.8)
+    y0 = max(0, (h - ch) // 2)
+    x0 = max(0, (w - cw) // 2)
+    cropped = image[y0:y0+ch, x0:x0+cw]
+    save_safe(cropped, f"{name_base}_Crop{name_ext}", aug_subdir)
+
+    # distortion / noise
+    distorted = image.astype(np.float64) + 0.5 * image.std() * np.random.random(image.shape)
+    save_safe(distorted, f"{name_base}_Distortion{name_ext}", aug_subdir)
+
+
+def augmentDirectory(directory, counts, PathAugmentedImages):
     if not os.path.exists(directory):
         raise FileNotFoundError(f"The directory {directory} does not exist.")
 
@@ -121,61 +160,46 @@ def augment(directory, counts, PathAugmentedImages):
                     continue
                 
                 counts[subdir] = counts[subdir] + 6  # each image generates 6 new images
-                
 
-                name_base = os.path.splitext(filename)[0]
-                name_ext = os.path.splitext(filename)[1] or '.png'
+                # apply augmentations
+                modifyImage(image, filename, aug_subdir)
 
-                # flip
-                flipped = image[:, ::-1]
-                save_safe(flipped, f"{name_base}_Flip{name_ext}", aug_subdir)
 
-                # skew
-                skewed = warp(image, AffineTransform(shear=0.2))
-                save_safe(skewed, f"{name_base}_Skew{name_ext}", aug_subdir)
+def augmentFile(file_path, filename, PathAugmentedImages):
+    if not os.path.isfile(file_path):
+        raise FileNotFoundError(f"The file {file_path} does not exist.")
 
-                # shear
-                sheared = warp(image, AffineTransform(shear=0.3))
-                save_safe(sheared, f"{name_base}_Shear{name_ext}", aug_subdir)
+    print(f"Augmenting single image file: {file_path}")
 
-                # rotate but keep full image (expand canvas)
-                angle = np.random.uniform(-30, 30)  # random angle in degrees
-                rotated = rotate(image, angle=angle, resize=True, preserve_range=True)
-                save_safe(rotated, f"{name_base}_Rot{name_ext}", aug_subdir)
+    os.makedirs(PathAugmentedImages, exist_ok=True)
 
-                
-                skewed = perspective_transform(image, max_shift=0.15)
-                save_safe(skewed, f"{name_base}_Skew{name_ext}", aug_subdir)
+    # read image
+    image = io.imread(file_path)
 
-                # crop: reduce image to 80% of original (i.e. crop 20%) centered
-                h, w = image.shape[:2]
-                ch = int(h * 0.8)
-                cw = int(w * 0.8)
-                y0 = max(0, (h - ch) // 2)
-                x0 = max(0, (w - cw) // 2)
-                cropped = image[y0:y0+ch, x0:x0+cw]
-                save_safe(cropped, f"{name_base}_Crop{name_ext}", aug_subdir)
+    # save original copy
+    save_safe(image, filename, PathAugmentedImages)
 
-                # distortion / noise
-                distorted = image.astype(np.float64) + 0.5 * image.std() * np.random.random(image.shape)
-                save_safe(distorted, f"{name_base}_Distortion{name_ext}", aug_subdir)
+    # apply augmentations
+    modifyImage(image, filename, PathAugmentedImages)
 
-                # save original copy
-                save_safe(image, filename, aug_subdir)
-                
 def main():
     try:
         parser = argparse.ArgumentParser(description="Create new images using data augmentation techniques \n• Flip\n• Rotate\n• Skew\n• Contrast\n• Crop\n• Distortion")
-        parser.add_argument("path", type=str, help="Path to the Images directory")
+        parser.add_argument("path", type=str, help="Path to the Images or directory")
         parser.add_argument("--output", type=str, default=None, help="Path to save augmented images (default: <path>/augmented/)")
         args = parser.parse_args()
 
-        # if --output not provided, use <path>/augmented
-        output_dir = args.output if args.output else os.path.join(args.path, "augmented")
-        imagesPerFolder = getNbImagesPerFolder(args.path)
 
-        augment(args.path, imagesPerFolder, output_dir)
-
+        # if it is a directory
+        if os.path.isdir(args.path):
+            # if --output not provided, use <path>/augmented
+            output_dir = args.output if args.output else os.path.join(args.path, "augmented")
+            imagesPerFolder = getNbImagesPerFolder(args.path)
+            augmentDirectory(args.path, imagesPerFolder, output_dir)
+        else:
+            # if --output not provided, use <parent_of_path>/augmented
+            output_dir = args.output if args.output else os.path.join(os.path.dirname(args.path), "augmented")
+            augmentFile(args.path, os.path.basename(args.path), output_dir)
     except Exception as e:
         print(f"Error: {e}")
         sys.exit(1)
