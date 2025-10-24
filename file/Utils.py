@@ -2,121 +2,73 @@
 
 from ast import List
 import os
+from pathlib import Path
 import matplotlib
-
 matplotlib.use('TkAgg')  # select a GUI backend BEFORE importing pyplot
+
+import skimage as ski
 from skimage import io, exposure
 from skimage.util import img_as_ubyte
 import numpy as np
-import warnings
+from joblib import Parallel, delayed
+from tqdm import tqdm
 
 
-# suppress skimage low-contrast UserWarning
-warnings.filterwarnings("ignore", message=".*low contrast.*")
+def load_image(path):
+    """Load an image as float from path"""
+    return ski.util.img_as_float(ski.io.imread(path))
 
-def getNbImagesPerFolder(directory):
-    if not os.path.exists(directory):
-        raise FileNotFoundError(f"The directory {directory} does not exist.")
 
-    subdirs = [d for d in os.listdir(directory) if os.path.isdir(os.path.join(directory, d))]
-    counts = {}
+def save_image(image, save_path: Path):
+    """Save image of any type, (converted with img_as_ubyte)"""
     
-    for subdir in subdirs:
-        subdir_path = os.path.join(directory, subdir)
-        counts[subdir] = len([f for f in os.listdir(subdir_path) if os.path.isfile(os.path.join(subdir_path, f))])
-
-    # print("Number of images per folder:")
-    # for subdir, count in counts.items():
-    #     print(f"{subdir}: {count}")
-
-    return counts
-
-# helper to save with safe dtype and extension into the per-class output dir
-def save_safe(img, dst_name, aug_subdir):
-    base, ext = os.path.splitext(dst_name)
-    if ext == '':
-        ext = '.png'
-        dst_name = base + ext
-    dst_path = os.path.join(aug_subdir, dst_name)
-
-    # boost contrast for very low-contrast images
-    try:
-        if exposure.is_low_contrast(img):
-            img = exposure.equalize_adapthist(img)  # returns float in [0,1]
-    except Exception:
-        print(f"Warning: could not adjust contrast for image {dst_name}, saving original.")
-        pass
-
-    # convert floats to uint8 in [0..255]; handle floats not in [0,1]
-    if np.issubdtype(img.dtype, np.floating):
-        # if floats are not in [0,1], rescale from image range to [0,1]
-        if img.max() > 1.0 or img.min() < 0.0:
-            img = exposure.rescale_intensity(img, in_range='image', out_range=(0.0, 1.0))
-        img = np.clip(img, 0.0, 1.0)
-        img = img_as_ubyte(img)
-    elif img.dtype != np.uint8:
-        # convert other integer types to uint8
-        img = img_as_ubyte(img)
-    io.imsave(dst_path, img)
+    save_path.parent.mkdir(parents=True,  exist_ok=True)
+    image = ski.util.img_as_ubyte(image)
+    ski.io.imsave(save_path, image, check_contrast=False)
 
 
-def transformDirectory(directory, pathTransformedImages, callback):
-    if not os.path.exists(directory):
-        raise FileNotFoundError(f"The directory {directory} does not exist.")
+def gen_path(image_path: Path, filename_suffix: str, out_dir="transformed") -> Path:
+    """
+    Generate a new output path by merging the given image_path into out_dir.
+    Keeps the last two directory levels of image_path, and replaces the filename
+    with filename_suffix. Never raises errors for shallow paths.
+    
+    Example:
+        image_path = Path("file/image/Apple/Apple_black_rot/image (1).jpg")
+        filename_suffix = "rotated_image (1).jpg"
+        out_dir = "transformed"
+        -> transformed/Apple/Apple_black_rot/rotated_image (1).jpg
+    """
+    image_path = Path(image_path)
+    out_dir = Path(out_dir)
 
-    print(f"Transforming images in directory: {directory}")
+    parts = image_path.parts
+    # Get up to last 3 parts (2 dirs + filename)
+    sub_parts = parts[-3:] if len(parts) >= 3 else parts
+    # Replace filename with the provided suffix
+    if sub_parts:
+        sub_parts = list(sub_parts)
+        sub_parts[-1] = filename_suffix
 
-    os.makedirs(pathTransformedImages, exist_ok=True)
-
-    # avoid processing the output folder if it's inside the source directory
-    out_basename = os.path.basename(os.path.normpath(pathTransformedImages))
-    for subdir in os.listdir(directory):
-        if subdir == out_basename:
-            continue
-        subdir_path = os.path.join(directory, subdir)
-        if os.path.isdir(subdir_path):
-            print(f"Processing subdirectory: {subdir}")
-
-            # create per-class output folder
-            aug_subdir = os.path.join(pathTransformedImages, subdir)
-            os.makedirs(aug_subdir, exist_ok=True)
-
-            for filename in os.listdir(subdir_path):
-                file_path = os.path.join(subdir_path, filename)
-                if not os.path.isfile(file_path):
-                    continue
-
-                # read image
-                image = io.imread(file_path)
-                # continue
-                # apply augmentations
-                imags: List =  callback(image, filename, aug_subdir)
-                # save image to disk
-
-                for (im, name) in imags:
-                    save_safe(im, name, aug_subdir)
+    new_subpath = Path(*sub_parts)
+    return out_dir / new_subpath
 
 
-
-def transformFile(file_path, filename, pathTransformedImages, callback):
-    if not os.path.isfile(file_path):
-        raise FileNotFoundError(f"The file {file_path} does not exist.")
-
-    print(f"Transforming single image file: {file_path}")
-
-    os.makedirs(pathTransformedImages, exist_ok=True)
-
-    # read image
-    image = io.imread(file_path)
-
-    # save original copy
-    save_safe(image, filename, pathTransformedImages)
-
-    # apply augmentations
-    imags: List =  callback(image, filename, pathTransformedImages)
-    # save image to disk
-
-    for (im, name) in imags:
-        save_safe(im, name, pathTransformedImages)
+def parallel_process(items, func, n_jobs=-1, use_tqdm=True):
+    """Launch jobs in parallel with a tqdm progress bar"""
+    if use_tqdm:
+        return Parallel(n_jobs=n_jobs, backend="loky")(
+            delayed(func)(item) for item in tqdm(items)
+        )
+    else:
+        return Parallel(n_jobs=n_jobs)(delayed(func)(item) for item in items)
 
 
+def get_all_images(root_dir, exts=(".jpg", ".jpg", ".jpeg", ".png", ".tif", ".bmp")):
+    root_dir = Path(root_dir)
+    # Use rglob for recursive search; match extensions case-insensitively
+    image_paths = [
+        p for p in root_dir.rglob("*")
+        if p.suffix.lower() in exts
+    ]
+    return sorted(image_paths)
