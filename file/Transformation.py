@@ -8,6 +8,7 @@ import matplotlib
 
 matplotlib.use('TkAgg')  # select a GUI backend BEFORE importing pyplot
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 from skimage import color, filters, morphology, measure, segmentation
 from skimage.draw import rectangle_perimeter
 import numpy as np
@@ -41,7 +42,7 @@ def modifyImage(image, filename, aug_subdir):
 
     # ensure boolean mask
     binary_mask = binary_mask.astype(bool)
-    binary_mask = filters.gaussian(binary_mask, sigma=1, preserve_range=True)
+    
     # save binary mask
     imageSet.append((binary_mask, f"{name_base}_BinaryMask{name_ext}"))
 
@@ -54,7 +55,12 @@ def modifyImage(image, filename, aug_subdir):
 
     # save masked (foreground) image — use safe RGB indexing
     masked_image = image.copy()
-    masked_image[~binary_mask, :] = 0
+    # set background to white while preserving dtype
+    if np.issubdtype(masked_image.dtype, np.floating):
+        bg_val = 1.0
+    else:
+        bg_val = 255
+    masked_image[~binary_mask, :] = bg_val
     imageSet.append((masked_image, f"{name_base}_Foreground{name_ext}"))
 
     # annotate the preserved original: paint red where the mask is True (white on masked image)
@@ -73,7 +79,70 @@ def modifyImage(image, filename, aug_subdir):
     blue_edge_image[thick_edge, :] = [0, 0, 255]
     imageSet.append((blue_edge_image, f"{name_base}_Analyze{name_ext}"))
 
-    
+        # compute mask boundary and draw a blue line on the original (edge between white and black)
+    edge = segmentation.find_boundaries(binary_mask, mode='inner')
+    thickness_radius = 2
+    selem = morphology.disk(thickness_radius)
+    thick_edge = morphology.binary_dilation(edge, selem)
+    blue_edge_image = originalImage.copy()
+    blue_edge_image[thick_edge, :] = [0, 0, 255]
+    imageSet.append((blue_edge_image, f"{name_base}_Analyze{name_ext}"))
+
+    # Gaussian Blur
+    # blur the masked image (background already white)
+    blurred = filters.gaussian(image=masked_image, sigma=2, preserve_range=True)
+    imageSet.append((blurred, f"{name_base}_GaussianBlur{name_ext}"))
+
+    # histogram: will put an image in a graph with the average color
+    # Ignore white background pixels when computing histograms
+    if np.issubdtype(masked_image.dtype, np.floating):
+        # white is ~1.0 for float images
+        white_tol = 0.999
+        nonwhite_mask = np.any(masked_image < white_tol, axis=2)
+        hist_range = (0.0, 1.0)
+        # black is ~0.0 for float images
+        black_tol = 0.001
+        nonblack_mask = np.any(masked_image > black_tol, axis=2)
+        nonbackground_mask = nonwhite_mask & nonblack_mask
+        nonwhite_mask = nonbackground_mask
+    else:
+        # white is 255 for uint8 images
+        nonwhite_mask = np.any(masked_image != 255, axis=2)
+        hist_range = (0, 255)
+
+    if np.count_nonzero(nonwhite_mask) == 0:
+        # fallback: use whole image if no non-white pixels found
+        r = masked_image[:, :, 0].ravel()
+        g = masked_image[:, :, 1].ravel()
+        b = masked_image[:, :, 2].ravel()
+    else:
+        r = masked_image[:, :, 0][nonwhite_mask].ravel()
+        g = masked_image[:, :, 1][nonwhite_mask].ravel()
+        b = masked_image[:, :, 2][nonwhite_mask].ravel()
+
+
+    # Plot histogram into a figure and convert to an RGB numpy image
+    fig = plt.figure(figsize=(8, 5))
+    ax = fig.add_subplot(1, 1, 1)
+    ax.hist(r, bins=256, range=hist_range, color='red', alpha=0.4, histtype='stepfilled', label='R')
+    ax.hist(g, bins=256, range=hist_range, color='green', alpha=0.4, histtype='stepfilled', label='G')
+    ax.hist(b, bins=256, range=hist_range, color='blue', alpha=0.4, histtype='stepfilled', label='B')
+    ax.set_xlabel('Pixel intensity')
+    ax.set_ylabel('Frequency')
+    ax.set_title('RGB Histogram')
+    ax.legend(loc='upper right')
+
+    # Render figure to RGB numpy array using Agg canvas (works even with TkAgg)
+    canvas = FigureCanvasAgg(fig)
+    canvas.draw()
+    width, height = canvas.get_width_height()
+    arr = np.frombuffer(canvas.buffer_rgba(), dtype=np.uint8)
+    arr.shape = (height, width, 4)
+    buf = arr[:, :, :3]
+    hist_img = buf.copy()  # ensure contiguous
+
+    imageSet.append((hist_img, f"{name_base}_Histogram.png"))
+    plt.close(fig)
 
 
 
