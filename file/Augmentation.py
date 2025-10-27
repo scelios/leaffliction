@@ -6,6 +6,7 @@ import sys
 import argparse
 import skimage as ski
 import numpy as np
+from collections import defaultdict
 
 import Utils as u
 
@@ -139,6 +140,32 @@ def process_one_image(image_path: Path, out_dir="transformed"):
         # print("...saved", out_dir, out_name)
 
 
+def balance_image_paths(image_paths):
+    # Group images by fruit and variation
+    grouped = defaultdict(lambda: defaultdict(list))
+
+    for path in image_paths:
+        parts = path.parts
+        # Example: file/images/Grape/Grape_spot/image.JPG
+        if len(parts) < 4:
+            continue  # skip malformed paths
+        fruit = parts[-3]            # e.g., 'Grape'
+        variation = parts[-2]        # e.g., 'Grape_spot'
+        grouped[fruit][variation].append(path)
+
+    balanced_paths = []
+
+    # For each fruit, balance between variations
+    for fruit, variations in grouped.items():
+        min_count = min(len(paths) for paths in variations.values())
+        # print(fruit, min_count)
+        for variation, paths in variations.items():
+            # print(variation, len(paths))
+            balanced_paths.extend(paths[:min_count])
+
+    return balanced_paths
+
+
 def main():
     try:
         parser = argparse.ArgumentParser(
@@ -185,6 +212,9 @@ def main():
         all_image_paths = []
         if os.path.isdir(args.path):
             all_image_paths = u.get_all_images(args.path)
+            all_image_paths = balance_image_paths(all_image_paths)
+            # print(all_image_paths)
+            # exit(0)
         else:
             all_image_paths = [Path(args.path)]
 
