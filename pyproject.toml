@@ -9,4 +9,5 @@ dependencies = [
     "scikit-image>=0.25.2",
     "tqdm>=4.67.1",
     "tensorflow>=2.20.0",
+    "plantcv>=4.9",
 ]
