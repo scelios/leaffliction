@@ -94,7 +94,7 @@ def shear(image, shear_angle):
     return _ensure_same_shape(image, transformed_image)
 
 
-def process_one_image(image_path: Path, out_dir="transformed"):
+def process_one_image(image_path: Path, out_dir):
     """
     Load an image, apply several augmentations using skimage, and save all variants.
     """
@@ -140,7 +140,7 @@ def process_one_image(image_path: Path, out_dir="transformed"):
         # print("...saved", out_dir, out_name)
 
 
-def balance_image_paths(image_paths):
+def balance_image_paths(image_paths, num_validation):
     # Group images by fruit and variation
     grouped = defaultdict(lambda: defaultdict(list))
 
@@ -154,6 +154,7 @@ def balance_image_paths(image_paths):
         grouped[fruit][variation].append(path)
 
     balanced_paths = []
+    validation_paths = []
 
     # For each fruit, balance between variations
     for fruit, variations in grouped.items():
@@ -161,9 +162,16 @@ def balance_image_paths(image_paths):
         # print(fruit, min_count)
         for variation, paths in variations.items():
             # print(variation, len(paths))
-            balanced_paths.extend(paths[:min_count])
+            balanced_paths.extend(paths[num_validation:min_count])
+            validation_paths.extend(paths[:num_validation])
 
-    return balanced_paths
+    return balanced_paths, validation_paths
+
+
+def copy_validation_image(image_path: Path, out_dir):
+    img = u.load_image(image_path)
+    out_name = f"{image_path.stem}{image_path.suffix}"
+    u.save_image(img, u.gen_path(image_path, out_name, out_dir+"/validation"))
 
 
 def main():
@@ -191,17 +199,26 @@ def main():
             type=str,
             help=(
                 "Path to an image file or a directory containing images.\n"
-                "Supported formats are determined by Utils.get_all_images()."
             )
         )
 
         parser.add_argument(
             "--output",
             type=str,
-            default="transformed",
+            default="augmented_directory",
             help=(
                 "Output directory to save augmented images.\n"
-                "Defaults to './transformed' if not specified."
+                "Defaults to './augmented_directory' if not specified."
+            )
+        )
+
+        parser.add_argument(
+            "--validation",
+            type=int,
+            default="16",
+            help=(
+                "Number of images to keep as validation from each category.\n"
+                "Defaults to '16' if not specified."
             )
         )
 
@@ -209,16 +226,16 @@ def main():
 
         np.random.seed(42)
 
-        all_image_paths = []
+        images_to_augment = []
+        validation_images = []
         if os.path.isdir(args.path):
             all_image_paths = u.get_all_images(args.path)
-            all_image_paths = balance_image_paths(all_image_paths)
-            # print(all_image_paths)
-            # exit(0)
+            images_to_augment, validation_images = balance_image_paths(all_image_paths, args.validation)
         else:
-            all_image_paths = [Path(args.path)]
+            images_to_augment = [Path(args.path)]
 
-        u.parallel_process(all_image_paths, (lambda img : process_one_image(img, args.output)), n_jobs=8)
+        u.parallel_process(images_to_augment, (lambda img : process_one_image(img, args.output)), n_jobs=8)
+        u.parallel_process(validation_images, (lambda img : copy_validation_image(img, args.output)), n_jobs=8)
 
     except Exception as e:
         print(f"Error: {e}")

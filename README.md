@@ -8,7 +8,7 @@
     - half day
 - [ ] _maybe_ Modify augmentation to use `tf.keras` for image split & dataset augementation,
     - half day, if time
-- [ ] split dataset before into validation & train (pre augment)
+- [x] split dataset before into validation & train (pre augment)
     - half half day
 - [ ] use `tessorflow` to setup CNN to learn leaf categories, aplle_rust, grape_healthy, etc ...
     - 2 days
