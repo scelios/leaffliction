@@ -1,5 +1,13 @@
 # leaffliction
 
+## links
+https://www.tensorflow.org/tutorials/images/classification
+
+
+
+
+
+
 ## TODO
 
 > 🏁 **Finish for this week** `31/10/2025`
