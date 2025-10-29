@@ -21,23 +21,16 @@ def load_image(path):
 
 def save_image(image, save_path: Path):
     """Save image of any type, (converted with img_as_ubyte)"""
-    
     save_path.parent.mkdir(parents=True,  exist_ok=True)
     image = ski.util.img_as_ubyte(image)
     ski.io.imsave(save_path, image, check_contrast=False)
 
 
-def gen_path(image_path: Path, filename_suffix: str, out_dir="transformed") -> Path:
+def gen_path(image_path: Path, filename_suffix: str, out_dir="transformed", top_folder="train") -> Path:
     """
     Generate a new output path by merging the given image_path into out_dir.
     Keeps the last two directory levels of image_path, and replaces the filename
-    with filename_suffix. Never raises errors for shallow paths.
-    
-    Example:
-        image_path = Path("file/image/Apple/Apple_black_rot/image (1).jpg")
-        filename_suffix = "rotated_image (1).jpg"
-        out_dir = "transformed"
-        -> transformed/Apple/Apple_black_rot/rotated_image (1).jpg
+    with filename_suffix.
     """
     image_path = Path(image_path)
     out_dir = Path(out_dir)
@@ -49,6 +42,7 @@ def gen_path(image_path: Path, filename_suffix: str, out_dir="transformed") -> P
     if sub_parts:
         sub_parts = list(sub_parts)
         sub_parts[-1] = filename_suffix
+        sub_parts[0] = top_folder
 
     new_subpath = Path(*sub_parts)
     return out_dir / new_subpath

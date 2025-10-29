@@ -171,7 +171,7 @@ def balance_image_paths(image_paths, num_validation):
 def copy_validation_image(image_path: Path, out_dir):
     img = u.load_image(image_path)
     out_name = f"{image_path.stem}{image_path.suffix}"
-    u.save_image(img, u.gen_path(image_path, out_name, out_dir+"/validation"))
+    u.save_image(img, u.gen_path(image_path, out_name, out_dir, "validation"))
 
 
 def main():
