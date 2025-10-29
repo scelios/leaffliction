@@ -211,3 +211,5 @@ file/images
 transformed
 augmented
 augmented_directory
+
+*.keras
