@@ -2,28 +2,49 @@
 
 import os
 import tensorflow as tf
-import tensorflow_datasets as tfds
+
 import matplotlib
 os.environ['CUDA_VISIBLE_DEVICES'] = ''  # set to '' to disable GPU init
 # Reduce TensorFlow logs: 0=all, 1=INFO, 2=WARNING, 3=ERROR
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 matplotlib.use('TkAgg')  # select a GUI backend BEFORE importing pyplot
 import matplotlib.pyplot as plt
+from pathlib import Path
+from typing import Any
 
-ds_split, info = tfds.load("penguins/processed", split=['train[:20%]', 'train[20%:]'], as_supervised=True, with_info=True)
 
-ds_test = ds_split[0]
-ds_train = ds_split[1]
+train_dir = Path("augmented_directory/images")
+validation_dir = Path("augmented_directory/validation/images")
+opts = {
+    "batch_size": 32,
+    "img_height": 256, 
+    "img_width": 256,
+}
+# replace remote tfds load with loading from local directories
+ds_train = tf.keras.utils.image_dataset_from_directory(
+    train_dir,
+    labels='inferred',
+    label_mode='int',
+    batch_size=opts["batch_size"],
+    image_size=(opts["img_height"], opts["img_width"]),
+    shuffle=True,
+)
+ds_test = tf.keras.utils.image_dataset_from_directory(
+    validation_dir,
+    labels='inferred',
+    label_mode='int',
+    batch_size=opts["batch_size"],
+    image_size=(opts["img_height"], opts["img_width"]),
+    shuffle=False,
+)
 
-predict_dataset = tf.convert_to_tensor([
-    [0.3, 0.8, 0.4, 0.5,],
-    [0.4, 0.1, 0.8, 0.5,],
-    [0.7, 0.9, 0.8, 0.4]
-])
+predict_dataset = ds_test.unbatch().take(5).batch(1)
 
 # training=False is needed only if there are layers with different
 # behavior during training versus inference (e.g. Dropout).
-class_names = ['Adélie', 'Chinstrap', 'Gentoo']
+# derive class names from the directory dataset
+class_names = ds_train.class_names
+print("Class names:", class_names)
 
 keras_model_path = './keras_save.keras'
 

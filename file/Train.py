@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # what do i need to do? 
 
 # get my images
