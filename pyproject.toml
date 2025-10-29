@@ -10,4 +10,5 @@ dependencies = [
     "tqdm>=4.67.1",
     "tensorflow>=2.20.0",
     "plantcv>=4.9",
+    "keras>=3.11.3",
 ]

@@ -3,11 +3,6 @@
 ## links
 https://www.tensorflow.org/tutorials/images/classification
 
-
-
-
-
-
 ## TODO
 
 > 🏁 **Finish for this week** `31/10/2025`
@@ -24,7 +19,13 @@ https://www.tensorflow.org/tutorials/images/classification
     - half day
 - [ ] learn about CNN and the training process, enough to explain for eval
     - half day (?)
-- [ ] get distracted
+- [x] get distracted
     - sporatic, 1 day
 - [ ] play katan
     - 4 hours
+- [ ] do transformation for a directory, save plot for each image
+
+# CNN
+
+> **Convolutional Neural Network**
+

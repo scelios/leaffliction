@@ -142,28 +142,28 @@ def process_one_image(image_path: Path, out_dir):
 
 def balance_image_paths(image_paths, num_validation):
     # Group images by fruit and variation
-    grouped = defaultdict(lambda: defaultdict(list))
+    grouped = defaultdict(list)
 
     for path in image_paths:
         parts = path.parts
         # Example: file/images/Grape/Grape_spot/image.JPG
-        if len(parts) < 4:
+        if len(parts) < 2:
             continue  # skip malformed paths
-        fruit = parts[-3]            # e.g., 'Grape'
         variation = parts[-2]        # e.g., 'Grape_spot'
-        grouped[fruit][variation].append(path)
+        grouped[variation].append(path)
 
     balanced_paths = []
     validation_paths = []
 
-    # For each fruit, balance between variations
-    for fruit, variations in grouped.items():
-        min_count = min(len(paths) for paths in variations.values())
-        # print(fruit, min_count)
-        for variation, paths in variations.items():
-            # print(variation, len(paths))
-            balanced_paths.extend(paths[num_validation:min_count])
-            validation_paths.extend(paths[:num_validation])
+    min_count = 10000
+    for variation, paths in grouped.items():
+        # print(variation, len(paths))
+        min_count = min(len(paths), min_count)
+
+    for variation, paths in grouped.items():
+        # print(variation, len(paths))
+        balanced_paths.extend(paths[num_validation:min_count])
+        validation_paths.extend(paths[:num_validation])
 
     return balanced_paths, validation_paths
 
