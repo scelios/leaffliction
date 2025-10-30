@@ -1,7 +1,9 @@
 # leaffliction
 
 ## links
-https://www.tensorflow.org/tutorials/images/classification
+
+- https://www.tensorflow.org/tutorials/images/classification
+- https://www.tensorflow.org/tutorials/load_data/images
 
 ## TODO
 
@@ -173,3 +175,14 @@ Core dev files and metadata:
 - PlantCV: https://plantcv.readthedocs.io/en/stable/
 
 ---
+
+**TODO write the breakdown of how it all supposed to work**
+
+
+## some shell commands
+
+Transform the unit test files to the directory structure that is required.
+
+```bash
+ls -1 | xargs -I{} bash -c "echo {} | sed 's/[0-9]*\\.JPG$//'" | xargs -I{} bash -c "mkdir -p {} & mv {}*.JPG {}"
+```     

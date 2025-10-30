@@ -26,12 +26,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ["KERAS_BACKEND"] = "tensorflow"
 
 import tensorflow as tf
-
-tf.get_logger().setLevel('ERROR')
-
-
 import keras as ks
-
 
 def train(epochs, train_dir: Path, validation_dir: Path):
     opts = {
@@ -42,20 +37,18 @@ def train(epochs, train_dir: Path, validation_dir: Path):
 
     train_ds : Any = ks.utils.image_dataset_from_directory(
         train_dir,
-        # subset="training",
-        # validation_split=1,
-        # seed=123,
+        labels='inferred',
+        label_mode='int',
+        batch_size=opts["batch_size"],
         image_size=(opts["img_height"], opts["img_width"]),
-        batch_size=opts["batch_size"]
     )
 
     validation_ds : Any = ks.utils.image_dataset_from_directory(
         validation_dir,
-        # subset="validation",
-        # validation_split=1,
-        # seed=123,
+        labels='inferred',
+        label_mode='int',
+        batch_size=opts["batch_size"],
         image_size=(opts["img_height"], opts["img_width"]),
-        batch_size=opts["batch_size"]
     )
 
 
@@ -67,10 +60,8 @@ def train(epochs, train_dir: Path, validation_dir: Path):
     train_ds = train_ds.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
     validation_ds = validation_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
-    num_classes = len(class_names)
-
     model = ks.models.Sequential([
-        ks.layers.Rescaling(1./255, input_shape=(opts["img_height"], opts["img_width"], 3)),
+        ks.layers.Rescaling(1./255),
         ks.layers.Conv2D(16, 3, padding='same', activation='relu'),
         ks.layers.MaxPooling2D(),
         ks.layers.Conv2D(32, 3, padding='same', activation='relu'),
@@ -80,7 +71,7 @@ def train(epochs, train_dir: Path, validation_dir: Path):
         ks.layers.Dropout(0.2),
         ks.layers.Flatten(),
         ks.layers.Dense(128, activation='relu'),
-        ks.layers.Dense(num_classes, name="outputs")
+        ks.layers.Dense(len(class_names), name="outputs")
     ])
 
     model.compile(optimizer='adam',

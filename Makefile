@@ -54,6 +54,14 @@ images :
 	unzip file/leaves.zip -d file
 	rm -r file/leaves.zip
 
+.PHONY: test
+test :
+	ls test_images/Unit_test1 -1
+	ls test_images/Unit_test1 -1 | xargs -I{} python file/Predict.py test_images/Unit_test1/{}
+
+	ls test_images/Unit_test2 -1
+	ls test_images/Unit_test2 -1 | xargs -I{} python file/Predict.py test_images/Unit_test2/{}
+
 # ---------------------------------------------------------------------------- #
 #                                     UTILS                                    #
 # ---------------------------------------------------------------------------- #
