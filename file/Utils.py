@@ -16,11 +16,12 @@ def save_image(image, save_path: Path):
     ski.io.imsave(save_path, image, check_contrast=False)
 
 
-def gen_path(image_path: Path, filename_suffix: str, out_dir="transformed", top_folder="train") -> Path:
+def gen_path(image_path: Path, filename_suffix: str, out_dir="transformed",
+             top_folder="train") -> Path:
     """
     Generate a new output path by merging the given image_path into out_dir.
-    Keeps the last two directory levels of image_path, and replaces the filename
-    with filename_suffix.
+    Keeps the last two directory levels of image_path, and replaces the
+    filename with filename_suffix.
     """
     image_path = Path(image_path)
     out_dir = Path(out_dir)
@@ -48,7 +49,8 @@ def parallel_process(items, func, n_jobs=-1, use_tqdm=True):
         return Parallel(n_jobs=n_jobs)(delayed(func)(item) for item in items)
 
 
-def get_all_images(root_dir, exts=(".jpg", ".jpg", ".jpeg", ".png", ".tif", ".bmp")):
+def get_all_images(root_dir,
+                   exts=(".jpg", ".jpg", ".jpeg", ".png", ".tif", ".bmp")):
     root_dir = Path(root_dir)
     # Use rglob for recursive search; match extensions case-insensitively
     image_paths = [

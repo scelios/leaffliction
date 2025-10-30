@@ -1,41 +1,26 @@
 #!/usr/bin/env python3
 
-# what do i need to do? 
-
-# get my images
-
-# seprate validation images
-
-# augment images
-
-# define setting for the training
-
-# training ....
-
-# compare with validation set, obtain accuracy score!
-
-# save the results
-
+import keras as ks
+import tensorflow as tf
 import argparse
 import os
 from pathlib import Path
 from typing import Any
 import matplotlib.pyplot as plt
 
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ["KERAS_BACKEND"] = "tensorflow"
 
-import tensorflow as tf
-import keras as ks
 
 def train(epochs, train_dir: Path, validation_dir: Path):
     opts = {
         "batch_size": 32,
-        "img_height": 256, 
+        "img_height": 256,
         "img_width": 256,
     }
 
-    train_ds : Any = ks.utils.image_dataset_from_directory(
+    train_ds: Any = ks.utils.image_dataset_from_directory(
         train_dir,
         labels='inferred',
         label_mode='int',
@@ -43,14 +28,13 @@ def train(epochs, train_dir: Path, validation_dir: Path):
         image_size=(opts["img_height"], opts["img_width"]),
     )
 
-    validation_ds : Any = ks.utils.image_dataset_from_directory(
+    validation_ds: Any = ks.utils.image_dataset_from_directory(
         validation_dir,
         labels='inferred',
         label_mode='int',
         batch_size=opts["batch_size"],
         image_size=(opts["img_height"], opts["img_width"]),
     )
-
 
     class_names = train_ds.class_names
     print(class_names)
@@ -75,8 +59,9 @@ def train(epochs, train_dir: Path, validation_dir: Path):
     ])
 
     model.compile(optimizer='adam',
-                loss=ks.losses.SparseCategoricalCrossentropy(from_logits=True),
-                metrics=['accuracy'])
+                  loss=ks.losses.SparseCategoricalCrossentropy(
+                      from_logits=True),
+                  metrics=['accuracy'])
 
     model.summary()
 
@@ -111,6 +96,7 @@ def train(epochs, train_dir: Path, validation_dir: Path):
     keras_model_path = 'keras_save.keras'
     model.save(keras_model_path)
 
+
 if __name__ == "__main__":
 
     try:
@@ -130,7 +116,6 @@ if __name__ == "__main__":
         )
 
         args = parser.parse_args()
-
 
         train_dir = Path(args.dataset_dir) / "train"
         validate_dir = Path(args.dataset_dir) / "validation"

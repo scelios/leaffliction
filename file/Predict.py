@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import keras as ks
+import tensorflow as tf
 import argparse
 import os
 from pathlib import Path
@@ -9,12 +11,10 @@ import numpy as np
 import sklearn.metrics as skm
 import tempfile
 import shutil
+import Transformation as tfm
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ["KERAS_BACKEND"] = "tensorflow"
-
-import tensorflow as tf
-import keras as ks
 
 
 def predict(model, predict_image_path, class_names):
@@ -29,6 +29,22 @@ def predict(model, predict_image_path, class_names):
 
     print("===       DL classification       ===")
     print(f"Class predicted: \033[32m{class_names[score]}\033[0m")
+
+    mask = tfm.mask(img_array[0].numpy().astype(np.uint8))
+    # ensure binary 0/255 mask (plantcv usually returns this, but be safe)
+    mask_bin = (mask > 0).astype(np.uint8) * 255
+    # remove background from original image using the mask
+    orig = img_array[0].numpy().astype(np.uint8)
+    masked = tfm.pcv.apply_mask(img=orig, mask=mask_bin, mask_color='white')
+    plt.figure(figsize=(10, 5))
+    plt.subplot(1, 2, 1)
+    plt.imshow(orig)
+    plt.axis("off")
+    plt.subplot(1, 2, 2)
+    plt.imshow(masked)
+    plt.axis("off")
+    plt.title(f"Predicted class: {class_names[score]}")
+    plt.show()
 
 
 def evaluate_model(model, data_dir):
@@ -58,7 +74,8 @@ def evaluate_model(model, data_dir):
 
     # Plot confusion matrix
     fig, ax = plt.subplots(figsize=(8, 6))
-    disp = skm.ConfusionMatrixDisplay(confusion_matrix=cm_norm, display_labels=class_names)
+    disp = skm.ConfusionMatrixDisplay(
+        confusion_matrix=cm_norm, display_labels=class_names)
     disp.plot(cmap="Blues", ax=ax, values_format=".2f", colorbar=True)
     plt.title("Normalized Confusion Matrix")
     plt.xlabel("Predicted Class")
@@ -72,11 +89,11 @@ def load_model(keras_model_path, validation_dir):
     validation_dir = validation_dir
     opts = {
         "batch_size": 32,
-        "img_height": 256, 
+        "img_height": 256,
         "img_width": 256,
     }
     # replace remote tfds load with loading from local directories
-    ds_train : Any = ks.utils.image_dataset_from_directory(
+    ds_train: Any = ks.utils.image_dataset_from_directory(
         validation_dir,
         labels='inferred',
         label_mode='int',
@@ -117,7 +134,9 @@ if __name__ == "__main__":
         parser.add_argument(
             "path",
             type=str,
-            help=("predict the class of path for either a single image or a director for stats")
+            help=(
+                "predict the class of path for "
+                "either a single image or a director for stats")
         )
 
         parser.add_argument(
@@ -146,13 +165,14 @@ if __name__ == "__main__":
         # model = ks.saving.load_model(Path(args.model_path))
         # if not model:
             # raise FileNotFoundError("Could not load model")
-        
+
         ks.models.load_model
 
         predict_path = Path(args.path)
 
         if predict_path.is_dir():
-            fixed_pred_path, is_tmp_dir = gen_class_dir(predict_path, class_names)
+            fixed_pred_path, is_tmp_dir = gen_class_dir(
+                predict_path, class_names)
             if is_tmp_dir:
                 print("tmp path is", fixed_pred_path)
             evaluate_model(keras_model, fixed_pred_path)
