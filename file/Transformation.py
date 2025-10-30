@@ -7,6 +7,7 @@ from plantcv import plantcv as pcv
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2
+import os
 
 # Set debug to the global parameter
 # pcv.params.debug = "plot"
@@ -109,7 +110,7 @@ def color_histogram(img):
     return hist_data1
 
 
-def main(img):
+def main(img, save_path=None, filename=None):
     # Plot multiple images in one figure using matplotlib
     functions = [
         (original, "Original"),
@@ -180,7 +181,17 @@ def main(img):
     ax_hist.legend(loc="upper right", fontsize=8)
 
     # plt.tight_layout()
-    plt.show()
+    if not save_path:
+        plt.show()
+
+    if save_path:
+        os.makedirs(save_path, exist_ok=True)
+        # extract filename without extension
+        filename = filename.split('.')[0]
+        filename = os.path.splitext(os.path.basename(filename))[0]
+        output_file = os.path.join(save_path, f"{filename}.png")
+        fig.savefig(output_file, dpi=300)
+        print(f"Saved transformation figure to: {output_file}")
 
 
 if __name__ == "__main__":
@@ -199,12 +210,25 @@ if __name__ == "__main__":
                 "Path to an image file or a directory containing images.\n"
             )
         )
-
+        parser.add_argument(
+            "--output",
+            type=str,
+            default="transformed_directory",
+            help=(
+                "Output directory for transformed images "
+                "(default: transformed_directory).\n"
+            )
+        )
+        filename = None
         args = parser.parse_args()
-
-        img, path, filename = pcv.readimage(
-            args.path)  # type: ignore - it works!
-        main(img)
+        if os.path.isdir(args.path):
+            for img_file in os.listdir(args.path):
+                img, path, filename = pcv.readimage(
+                    os.path.join(args.path, img_file))
+                main(img, save_path=args.output, filename=filename)
+        else:
+            img, path, filename = pcv.readimage(args.path)
+            main(img, save_path=None, filename=filename)
 
     except Exception as e:
         print(f"Error: {e}")

@@ -7,7 +7,8 @@ import os
 from pathlib import Path
 from typing import Any
 import matplotlib.pyplot as plt
-
+import Utils as u
+import Augmentation as aug
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ["KERAS_BACKEND"] = "tensorflow"
@@ -97,6 +98,24 @@ def train(epochs, train_dir: Path, validation_dir: Path):
     model.save(keras_model_path)
 
 
+def is_dir_balanced(dir_path: Path, num_validation: int) -> bool:
+    # check if each subdirectory has around the same number of images (+- 5%)
+    # as the other or at least num_validation images
+    from collections import defaultdict
+    grouped = defaultdict(int)
+    for img_path in u.get_all_images(dir_path):
+        variation = img_path.parts[-2]
+        grouped[variation] += 1
+    counts = list(grouped.values())
+    min_count = min(counts)
+    max_count = max(counts)
+    if min_count < num_validation:
+        return False
+    if max_count > min_count * 1.05:
+        return False
+    return True
+
+
 if __name__ == "__main__":
 
     try:
@@ -114,9 +133,17 @@ if __name__ == "__main__":
             default=8,
             help=("number of epochs for training (default 8)")
         )
-
         args = parser.parse_args()
 
+        # Check if dataset is balanced, if not augment it
+        if is_dir_balanced(Path(args.dataset_dir), num_validation=50) is False:
+            args.dataset_dir = str(Path(args.dataset_dir).parent)
+            aug.main(str(Path(args.dataset_dir)), str(Path(
+                args.dataset_dir) / "augmented_directory"), 16)
+            args.dataset_dir = str(Path(args.dataset_dir) /
+                                   "augmented_directory")
+
+        print(f"Using dataset directory: {args.dataset_dir}")
         train_dir = Path(args.dataset_dir) / "train"
         validate_dir = Path(args.dataset_dir) / "validation"
         train(args.epoch, train_dir, validate_dir)

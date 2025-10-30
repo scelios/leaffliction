@@ -108,7 +108,7 @@ def shear(image, shear_angle):
     return _ensure_same_shape(image, transformed_image)
 
 
-def process_one_image(image_path: Path, out_dir):
+def process_one_image(image_path: Path, out_dir, display=False):
     """
     Load an image, apply several augmentations using skimage,
     and save all variants.
@@ -154,6 +154,16 @@ def process_one_image(image_path: Path, out_dir):
 
         u.save_image(img_aug, u.gen_path(image_path, out_name, out_dir))
         # print("...saved", out_dir, out_name)
+    if display:
+        # Display all augmented images on a single figure
+        import matplotlib.pyplot as plt
+        n = len(augmented)
+        fig, axes = plt.subplots(1, n, figsize=(4 * n, 4))
+        for ax, (suffix, img_aug) in zip(axes, augmented):
+            ax.imshow(img_aug)
+            ax.set_title(suffix)
+            ax.axis('off')
+        plt.show()
 
 
 def balance_image_paths(image_paths, num_validation):
@@ -190,76 +200,29 @@ def copy_validation_image(image_path: Path, out_dir):
     u.save_image(img, u.gen_path(image_path, out_name, out_dir, "validation"))
 
 
-def main():
+def main(image_path: str, output_dir: str, num_validation: int):
     try:
-        parser = argparse.ArgumentParser(
-            description=(
-                "Image Augmentation Tool\n"
-                "\n"
-                "This script generates augmented versions of input images "
-                "using various transformations:\n"
-                "  • Rotation\n"
-                "  • Rescaling\n"
-                "  • Contrast adjustment\n"
-                "  • Luminance enhancement\n"
-                "  • Gaussian blur\n"
-                "  • Shear (perspective) transform\n"
-                "\n"
-                "You can provide a single image file or a directory "
-                "containing multiple images.\n"
-                "All augmented images are saved to the specified output "
-                "directory."
-            ),
-            formatter_class=argparse.RawTextHelpFormatter
-        )
-
-        parser.add_argument(
-            "path",
-            type=str,
-            help=(
-                "Path to an image file or a directory containing images.\n"
-            )
-        )
-
-        parser.add_argument(
-            "--output",
-            type=str,
-            default="augmented_directory",
-            help=(
-                "Output directory to save augmented images.\n"
-                "Defaults to './augmented_directory' if not specified."
-            )
-        )
-
-        parser.add_argument(
-            "--validation",
-            type=int,
-            default="16",
-            help=(
-                "Number of images to keep as validation from each category.\n"
-                "Defaults to '16' if not specified."
-            )
-        )
-
-        args = parser.parse_args()
 
         np.random.seed(42)
 
         images_to_augment = []
         validation_images = []
-        if os.path.isdir(args.path):
-            all_image_paths = u.get_all_images(args.path)
+        display = False
+        if os.path.isdir(image_path):
+            all_image_paths = u.get_all_images(image_path)
             images_to_augment, validation_images = balance_image_paths(
-                all_image_paths, args.validation)
+                all_image_paths, num_validation)
         else:
-            images_to_augment = [Path(args.path)]
+            images_to_augment = [Path(image_path)]
+            display = True
 
         u.parallel_process(
             images_to_augment,
-            (lambda img: process_one_image(img, args.output)), n_jobs=8)
+            (lambda img: process_one_image(img, output_dir, display)),
+            n_jobs=8)
         u.parallel_process(validation_images,
                            (lambda img:
-                            copy_validation_image(img, args.output)), n_jobs=8)
+                            copy_validation_image(img, output_dir)), n_jobs=8)
 
     except Exception as e:
         print(f"Error: {e}")
@@ -267,4 +230,54 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(
+        description=(
+            "Image Augmentation Tool\n"
+            "\n"
+            "This script generates augmented versions of input images "
+            "using various transformations:\n"
+            "  • Rotation\n"
+            "  • Rescaling\n"
+            "  • Contrast adjustment\n"
+            "  • Luminance enhancement\n"
+            "  • Gaussian blur\n"
+            "  • Shear (perspective) transform\n"
+            "\n"
+            "You can provide a single image file or a directory "
+            "containing multiple images.\n"
+            "All augmented images are saved to the specified output "
+            "directory."
+        ),
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+
+    parser.add_argument(
+        "path",
+        type=str,
+        help=(
+            "Path to an image file or a directory containing images.\n"
+        )
+    )
+
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="augmented_directory",
+        help=(
+            "Output directory to save augmented images.\n"
+            "Defaults to './augmented_directory' if not specified."
+        )
+    )
+
+    parser.add_argument(
+        "--validation",
+        type=int,
+        default="16",
+        help=(
+            "Number of images to keep as validation from each category.\n"
+            "Defaults to '16' if not specified."
+        )
+    )
+
+    args = parser.parse_args()
+    main(args.path, args.output, args.validation)
