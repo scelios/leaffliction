@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+import sys
+from tqdm.keras import TqdmCallback
+import matplotlib.pyplot as plt
 import os
 import tensorflow as tf
 import tensorflow_datasets as tfds
@@ -8,8 +11,6 @@ os.environ['CUDA_VISIBLE_DEVICES'] = ''  # set to '' to disable GPU init
 # Reduce TensorFlow logs: 0=all, 1=INFO, 2=WARNING, 3=ERROR
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 matplotlib.use('TkAgg')  # select a GUI backend BEFORE importing pyplot
-import matplotlib.pyplot as plt
-from tqdm.keras import TqdmCallback
 # print("TensorFlow version: {}".format(tf.__version__))
 # print("TensorFlow Datasets version: ",tfds.__version__)
 
@@ -20,7 +21,9 @@ df = tfds.as_dataframe(ds_preview.take(5), info)
 
 class_names = ['Adélie', 'Chinstrap', 'Gentoo']
 
-ds_split, info = tfds.load("penguins/processed", split=['train[:20%]', 'train[20%:]'], as_supervised=True, with_info=True)
+ds_split, info = tfds.load(
+    "penguins/processed", split=['train[:20%]', 'train[20%:]'],
+    as_supervised=True, with_info=True)
 
 ds_test = ds_split[0]
 ds_train = ds_split[1]
@@ -53,9 +56,10 @@ features, labels = next(iter(ds_train_batch))
 
 # replace model creation to use an Input layer (removes the UserWarning)
 model = tf.keras.Sequential([
-  tf.keras.layers.Dense(10, activation=tf.nn.relu, input_shape=(4,)),  # input shape required
-  tf.keras.layers.Dense(10, activation=tf.nn.relu),
-  tf.keras.layers.Dense(3)
+    tf.keras.layers.Dense(10, activation=tf.nn.relu,
+                          input_shape=(4,)),  # input shape required
+    tf.keras.layers.Dense(10, activation=tf.nn.relu),
+    tf.keras.layers.Dense(3)
 ])
 
 
@@ -79,7 +83,8 @@ model.compile(
 num_epochs = 201
 
 # add this callback before calling fit()
-import sys
+
+
 class SingleLineProgress(tf.keras.callbacks.Callback):
     def __init__(self, epochs):
         super().__init__()
@@ -88,15 +93,18 @@ class SingleLineProgress(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         logs = logs or {}
         loss = logs.get("loss", 0.0)
-        acc = logs.get("sparse_categorical_accuracy", logs.get("accuracy", 0.0))
+        acc = logs.get("sparse_categorical_accuracy",
+                       logs.get("accuracy", 0.0))
         val_loss = logs.get("val_loss", 0.0)
-        val_acc = logs.get("val_sparse_categorical_accuracy", logs.get("val_accuracy", 0.0))
+        val_acc = logs.get("val_sparse_categorical_accuracy",
+                           logs.get("val_accuracy", 0.0))
         msg = (f"Epoch {epoch+1}/{self.epochs}  "
                f"loss:{loss:.4f}  acc:{acc:.4f}  "
                f"val_loss:{val_loss:.4f}  val_acc:{val_acc:.4f}")
         # print on one line, overwrite previous
         sys.stdout.write(msg + ("\n" if epoch+1 == self.epochs else "\r"))
         sys.stdout.flush()
+
 
 progress_cb = SingleLineProgress(num_epochs)
 
@@ -115,7 +123,8 @@ history = model.fit(
 
 # extract metrics for plotting
 train_loss_results = history.history['loss']
-train_accuracy_results = history.history.get('sparse_categorical_accuracy', history.history.get('accuracy', []))
+train_accuracy_results = history.history.get(
+    'sparse_categorical_accuracy', history.history.get('accuracy', []))
 
 # plot training metrics
 fig, axes = plt.subplots(2, sharex=True, figsize=(12, 8))
@@ -144,24 +153,12 @@ predict_dataset = tf.convert_to_tensor([
 predictions = model(predict_dataset, training=False)
 
 for i, logits in enumerate(predictions):
-  class_idx = tf.math.argmax(logits).numpy()
-  p = tf.nn.softmax(logits)[class_idx]
-  name = class_names[class_idx]
-  print("Example {} prediction: {} ({:4.1f}%)".format(i, name, 100*p))
+    class_idx = tf.math.argmax(logits).numpy()
+    p = tf.nn.softmax(logits)[class_idx]
+    name = class_names[class_idx]
+    print("Example {} prediction: {} ({:4.1f}%)".format(i, name, 100*p))
 
 
 # save the model in specified path
 keras_model_path = './keras_save.keras'
 model.save(keras_model_path)
-
-
-# load the model back
-# restored_keras_model = tf.keras.models.load_model(keras_model_path)
-# restored_keras_model.fit(ds_train.batch(32), epochs=1)
-# print("Model loaded from ./penguin_model_demo.kera")
-# predictions = restored_keras_model(predict_dataset, training=False)
-# for i, logits in enumerate(predictions):
-#   class_idx = tf.math.argmax(logits).numpy()
-#   p = tf.nn.softmax(logits)[class_idx]
-#   name = class_names[class_idx]
-#   print("Example {} prediction (from loaded model): {} ({:4.1f}%)".format(i, name, 100*p))

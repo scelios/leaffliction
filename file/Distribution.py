@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
 
+import matplotlib.pyplot as plt
 import os
 import sys
 import argparse
 import matplotlib
 matplotlib.use('TkAgg')  # select a GUI backend BEFORE importing pyplot
-import matplotlib.pyplot as plt
+
 
 def create_charts(directory):
     if not os.path.exists(directory):
         raise FileNotFoundError(f"The directory {directory} does not exist.")
 
-    subdirs = [d for d in os.listdir(directory) if os.path.isdir(os.path.join(directory, d))]
+    subdirs = [d for d in os.listdir(
+        directory) if os.path.isdir(os.path.join(directory, d))]
     counts = {}
-    
+
     for subdir in subdirs:
         subdir_path = os.path.join(directory, subdir)
-        counts[subdir] = len([f for f in os.listdir(subdir_path) if os.path.isfile(os.path.join(subdir_path, f))])
+        counts[subdir] = len([f for f in os.listdir(
+            subdir_path) if os.path.isfile(os.path.join(subdir_path, f))])
 
     labels = list(counts.keys())
     sizes = list(counts.values())
@@ -42,8 +45,11 @@ def create_charts(directory):
 
 def main():
     try:
-        parser = argparse.ArgumentParser(description="Create pie charts and bar charts for subdirectory types in a given directory.")
-        parser.add_argument("path", type=str, help="Path to the Images directory")
+        parser = argparse.ArgumentParser(
+            description="Create pie charts and bar charts "
+            "for subdirectory types in a given directory.")
+        parser.add_argument(
+            "path", type=str, help="Path to the Images directory")
         args = parser.parse_args()
         create_charts(args.path)
 
@@ -51,7 +57,6 @@ def main():
         print(f"Error: {e}")
         sys.exit(1)
 
+
 if __name__ == '__main__':
     main()
-
-

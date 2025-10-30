@@ -1,5 +1,4 @@
 import argparse
-import os
 import sys
 from matplotlib.gridspec import GridSpec
 from plantcv import plantcv as pcv
@@ -7,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cv2
 
-# Set debug to the global parameter 
+# Set debug to the global parameter
 # pcv.params.debug = "plot"
 # Change display settings
 # pcv.params.dpi = 100
@@ -24,19 +23,24 @@ def original(img):
 
 def gaussian_blur(img):
     b_img = pcv.rgb2gray(rgb_img=img)
-    detail_threashhold = pcv.threshold.binary(gray_img=b_img, threshold=120, object_type='light')
+    detail_threashhold = pcv.threshold.binary(
+        gray_img=b_img, threshold=120, object_type='light')
     b_img = pcv.rgb2gray_lab(rgb_img=img, channel='b')
-    shape_mask = pcv.threshold.binary(gray_img=b_img, threshold=130, object_type='light')
+    shape_mask = pcv.threshold.binary(
+        gray_img=b_img, threshold=130, object_type='light')
 
-    composed_img = pcv.apply_mask(img=detail_threashhold, mask=shape_mask, mask_color='black')
+    composed_img = pcv.apply_mask(
+        img=detail_threashhold, mask=shape_mask, mask_color='black')
 
-    gaussian = pcv.gaussian_blur(composed_img, ksize=(3, 3), sigma_x=0, sigma_y=None)
+    gaussian = pcv.gaussian_blur(
+        composed_img, ksize=(3, 3), sigma_x=0, sigma_y=None)
     return gaussian
 
 
 def mask(img):
     b_img = pcv.rgb2gray_lab(rgb_img=img, channel='b')
-    thresh_mask = pcv.threshold.binary(gray_img=b_img, threshold=130, object_type='light')
+    thresh_mask = pcv.threshold.binary(
+        gray_img=b_img, threshold=130, object_type='light')
     fill_mask = pcv.fill(bin_img=thresh_mask, size=1000)
     return fill_mask
 
@@ -49,11 +53,12 @@ def img_mask(img):
 
 def roi_objects(img):
     roi = pcv.roi.from_binary_image(img, mask(img))
-    
+
     # Plot each contour
     img_out = img.copy()
     for cnt in roi.contours:
-        cv2.drawContours(img_out, cnt, -1, color=(0, 255, 0), thickness=2)  # Green contours
+        cv2.drawContours(img_out, cnt, -1, color=(0, 255, 0),
+                         thickness=2)  # Green contours
 
         # all_points = np.vstack([cnt.reshape(-1, 2) for cnt in roi.contours])
         all_points = np.vstack(cnt[0])
@@ -61,13 +66,15 @@ def roi_objects(img):
         x_max = np.max(all_points[:, 0])
         y_min = np.min(all_points[:, 1])
         y_max = np.max(all_points[:, 1])
-        cv2.rectangle(img_out, (x_min, y_min), (x_max, y_max), color=(0, 0, 255), thickness=2)  # Blue rectangle
+        cv2.rectangle(img_out, (x_min, y_min), (x_max, y_max),
+                      color=(0, 0, 255), thickness=2)  # Blue rectangle
     return img_out
 
 
 def analyze_object(img):
     b_img = pcv.rgb2gray_lab(rgb_img=img, channel='b')
-    thresh_mask = pcv.threshold.binary(gray_img=b_img, threshold=130, object_type='light')
+    thresh_mask = pcv.threshold.binary(
+        gray_img=b_img, threshold=130, object_type='light')
     fill_mask = pcv.fill(bin_img=thresh_mask, size=1000)
     analysis_image = pcv.analyze.size(img=img, labeled_mask=fill_mask)
     return analysis_image
@@ -76,13 +83,16 @@ def analyze_object(img):
 def pseudolandmarks(img):
     # Identify a set of land mark points
     # Results in set of point values that may indicate tip points
-    left, right, center_h  = pcv.homology.y_axis_pseudolandmarks(img=img, mask=mask(img))
+    left, right, center_h = pcv.homology.y_axis_pseudolandmarks(
+        img=img, mask=mask(img))
 
     # Plot points on image
     img_out = img.copy()
+
     def plot_points(points, color):
         for pt in points:
-            cv2.circle(img_out, (int(pt[0][0]), int(pt[0][1])), radius=3, color=color, thickness=-1)
+            cv2.circle(img_out, (int(pt[0][0]), int(
+                pt[0][1])), radius=3, color=color, thickness=-1)
 
     plot_points(left, (255, 0, 0))       # Red for left
     plot_points(right, (0, 255, 0))      # Green for right
@@ -93,7 +103,7 @@ def pseudolandmarks(img):
 
 def color_histogram(img):
     # plantCV color_histogram
-    hist_figure1, hist_data1 = pcv.visualize.histogram(img = img, hist_data=True)
+    hist_figure1, hist_data1 = pcv.visualize.histogram(img=img, hist_data=True)
     return hist_data1
 
 
@@ -113,7 +123,7 @@ def main(img):
     gs = GridSpec(4, 2, figure=fig)  # 8 rows, 2 cols
 
     # Map first 6 functions to grid positions
-    positions = [(0,0),(0,1),(1,0),(1,1),(2,0),(2,1)]
+    positions = [(0, 0), (0, 1), (1, 0), (1, 1), (2, 0), (2, 1)]
     for (func, title), (r, c) in zip(functions, positions):
         ax = fig.add_subplot(gs[r, c])
         ax.set_title(title)
@@ -127,7 +137,7 @@ def main(img):
 
     lab_img = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
     hsv_img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
-    
+
     # Extract channels
     b_channel = img[:, :, 2]    # Blue
     g_channel = img[:, :, 1]    # Green
@@ -170,6 +180,7 @@ def main(img):
     # plt.tight_layout()
     plt.show()
 
+
 if __name__ == "__main__":
     try:
         parser = argparse.ArgumentParser(
@@ -188,11 +199,11 @@ if __name__ == "__main__":
         )
 
         args = parser.parse_args()
-        
-        img, path, filename = pcv.readimage(args.path) # type: ignore - it works!
+
+        img, path, filename = pcv.readimage(
+            args.path)  # type: ignore - it works!
         main(img)
 
     except Exception as e:
         print(f"Error: {e}")
         sys.exit(1)
-    
