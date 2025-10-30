@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import keras as ks
-import tensorflow as tf
 import argparse
 import os
 from pathlib import Path
@@ -12,6 +10,11 @@ import sklearn.metrics as skm
 import tempfile
 import shutil
 import Transformation as tfm
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ["KERAS_BACKEND"] = "tensorflow"
+import keras as ks  # noqa: E402      -- must come after os.environ
+import tensorflow as tf  # noqa: E402 -- must come after os.environ
+
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ["KERAS_BACKEND"] = "tensorflow"
@@ -136,7 +139,7 @@ if __name__ == "__main__":
             type=str,
             help=(
                 "predict the class of path for "
-                "either a single image or a director for stats")
+                "either a single image or a direcory for stats")
         )
 
         parser.add_argument(

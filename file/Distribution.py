@@ -4,8 +4,6 @@ import matplotlib.pyplot as plt
 import os
 import sys
 import argparse
-import matplotlib
-matplotlib.use('TkAgg')  # select a GUI backend BEFORE importing pyplot
 
 
 def create_charts(directory):
@@ -39,8 +37,8 @@ def create_charts(directory):
     plt.xticks(rotation=45)
 
     plt.tight_layout()
-    plt.show()
-    # plt.savefig("distribution.png", bbox_inches="tight")
+    # plt.show()
+    plt.savefig("distribution.png", bbox_inches="tight")
 
 
 def main():

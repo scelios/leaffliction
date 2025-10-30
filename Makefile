@@ -62,6 +62,11 @@ test :
 	ls test_images/Unit_test2 -1
 	ls test_images/Unit_test2 -1 | xargs -I{} python file/Predict.py test_images/Unit_test2/{}
 
+.PHONY: train
+train: images
+	uv sync
+	. .venv/bin/activate; python file/Train.py file/images
+
 # ---------------------------------------------------------------------------- #
 #                                     UTILS                                    #
 # ---------------------------------------------------------------------------- #
