@@ -4,8 +4,6 @@ import matplotlib.pyplot as plt
 import os
 import sys
 import argparse
-import matplotlib
-matplotlib.use('TkAgg')  # select a GUI backend BEFORE importing pyplot
 
 
 def create_charts(directory):

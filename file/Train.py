@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import keras as ks
-import tensorflow as tf
 import argparse
 import os
 from pathlib import Path
@@ -9,14 +7,15 @@ from typing import Any
 import matplotlib.pyplot as plt
 import Utils as u
 import Augmentation as aug
-
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ["KERAS_BACKEND"] = "tensorflow"
+import keras as ks  # noqa: E402      -- must come after os.environ
+import tensorflow as tf  # noqa: E402 -- must come after os.environ
 
 
-def train(epochs, train_dir: Path, validation_dir: Path):
+def train(epochs, train_dir: Path, validation_dir: Path, batch_size=32):
     opts = {
-        "batch_size": 32,
+        "batch_size": batch_size,
         "img_height": 256,
         "img_width": 256,
     }
@@ -46,6 +45,7 @@ def train(epochs, train_dir: Path, validation_dir: Path):
     validation_ds = validation_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
     model = ks.models.Sequential([
+        ks.layers.Input(shape=(opts["img_height"], opts["img_width"], 3)),
         ks.layers.Rescaling(1./255),
         ks.layers.Conv2D(16, 3, padding='same', activation='relu'),
         ks.layers.MaxPooling2D(),
@@ -94,7 +94,7 @@ def train(epochs, train_dir: Path, validation_dir: Path):
     plt.title('Training and Validation Loss')
     plt.show()
 
-    keras_model_path = 'keras_save.keras'
+    keras_model_path = 'leaffliction.keras'
     model.save(keras_model_path)
 
 
@@ -133,20 +133,32 @@ if __name__ == "__main__":
             default=8,
             help=("number of epochs for training (default 8)")
         )
+
+        parser.add_argument(
+            "--batch_size",
+            type=int,
+            default=32,
+            help=("batch size to use during training"
+                  "(usefull for memory constrained systems)")
+        )
+
         args = parser.parse_args()
 
         # Check if dataset is balanced, if not augment it
         if is_dir_balanced(Path(args.dataset_dir), num_validation=50) is False:
-            args.dataset_dir = str(Path(args.dataset_dir).parent)
-            aug.main(str(Path(args.dataset_dir)), str(Path(
-                args.dataset_dir) / "augmented_directory"), 16)
-            args.dataset_dir = str(Path(args.dataset_dir) /
+            print("Dataset is not balanced, generating augmented_directory")
+            image_dir = str(Path(args.dataset_dir))
+            args.dataset_dir = str(Path(args.dataset_dir).parent /
                                    "augmented_directory")
+            if Path(args.dataset_dir).is_dir() is False:
+                aug.main(image_dir, args.dataset_dir, 16)
+            else:
+                print("augmented_directory exists, using this")
 
         print(f"Using dataset directory: {args.dataset_dir}")
         train_dir = Path(args.dataset_dir) / "train"
         validate_dir = Path(args.dataset_dir) / "validation"
-        train(args.epoch, train_dir, validate_dir)
+        train(args.epoch, train_dir, validate_dir, args.batch_size)
 
     except Exception as e:
         print(f"Error: {e}")

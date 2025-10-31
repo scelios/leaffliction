@@ -1,52 +1,24 @@
-# ---------------------------------------------------------------------------- #
-#                                    DEFINS                                    #
-# ---------------------------------------------------------------------------- #
-NAME	:= inquisitor.py
-TARGET	:= inquisitor
+TARGET = leaffliction.keras
 
-SERVER	:= server
-CLIENT	:= client
+# Usage:
+# make ARGS=some_image.JPG
 
-CYAN="\033[1;36m"
-RED="\033[31m"
-GREEN="\033[32m"
-YELLOW="\033[33m"
-RESET="\033[m"
+# Or without make
+# uv sync
+# source .venv/bin/activate
+# python file/Train.py file/images
+# python file/Predict.py someimage.JPG
 
-# ---------------------------------------------------------------------------- #
-#                                     RULES                                    #
-# ---------------------------------------------------------------------------- #
+.PHONY: infer
+infer: train
+	. .venv/bin/activate; python file/Predict.py $(ARGS)
 
-.PHONY: all
-all	:
-	docker compose up --build -d && docker exec -it python /bin/bash
+.PHONY: train
+train : $(TARGET)
 
-.PHONY: clean
-clean	:
-	docker compose down -t0
-
-.PHONY: prune
-prune	: clean
-	docker system prune -f -a
-
-.PHONY: fclean
-fclean	: clean
-	-docker stop $(shell docker ps -qa) 2>/dev/null
-	-docker rm $(shell docker ps -qa) 2>/dev/null
-	-docker rmi -f $(shell docker images -qa) 2>/dev/null
-	-docker volume rm $(shell docker volume ls -q) 2>/dev/null
-	-docker network rm $(shell docker network ls -q) 2>/dev/null
-
-.PHONY: build
-build	:
-	docker compose up --build -d
-
-.PHONY: exec
-exec	: build
-	docker exec -it python /bin/bash
-
-.PHONY: re
-re : fclean all
+$(TARGET): images
+	uv sync
+	. .venv/bin/activate; python file/Train.py file/images
 
 .PHONY: images
 images :
@@ -54,16 +26,6 @@ images :
 	unzip file/leaves.zip -d file
 	rm -r file/leaves.zip
 
-.PHONY: test
-test :
-	ls test_images/Unit_test1 -1
-	ls test_images/Unit_test1 -1 | xargs -I{} python file/Predict.py test_images/Unit_test1/{}
-
-	ls test_images/Unit_test2 -1
-	ls test_images/Unit_test2 -1 | xargs -I{} python file/Predict.py test_images/Unit_test2/{}
-
-# ---------------------------------------------------------------------------- #
-#                                     UTILS                                    #
-# ---------------------------------------------------------------------------- #
-
-.PHONY: run
+.PHONY: package
+package : train
+	# write something to zip the outputs, augmented_directory and leaffliction.keras
