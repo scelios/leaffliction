@@ -110,6 +110,24 @@ def color_histogram(img):
     return hist_data1
 
 
+def extract_outline_mask(img, threshold=130, min_size=1000):
+    fill_mask = mask(img)
+
+    # Extract contour with maks
+    contours, _ = cv2.findContours(
+        fill_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Create blank mask
+    blank = np.zeros_like(fill_mask)
+
+    # Fillin outline region
+    contour = cv2.drawContours(
+        blank, contours, -1, color=255, thickness=-1)  # type: ignore
+
+    composed_img = pcv.apply_mask(img=img, mask=contour, mask_color='white')
+    return composed_img
+
+
 def main(img, save_path=None, filename=None):
     # Plot multiple images in one figure using matplotlib
     functions = [

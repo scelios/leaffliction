@@ -29,18 +29,14 @@ def predict(model, predict_image_path, class_names):
     print("===       DL classification       ===")
     print(f"Class predicted: \033[32m{class_names[score]}\033[0m")
 
-    mask = tfm.mask(img_array[0].numpy().astype(np.uint8))
-    # ensure binary 0/255 mask (plantcv usually returns this, but be safe)
-    mask_bin = (mask > 0).astype(np.uint8) * 255
-    # remove background from original image using the mask
-    orig = img_array[0].numpy().astype(np.uint8)
-    masked = tfm.pcv.apply_mask(img=orig, mask=mask_bin, mask_color='white')
+    cutout_img = tfm.extract_outline_mask(
+        img_array[0].numpy().astype(np.uint8))
     plt.figure(figsize=(10, 5))
     plt.subplot(1, 2, 1)
-    plt.imshow(orig)
+    plt.imshow(img)
     plt.axis("off")
     plt.subplot(1, 2, 2)
-    plt.imshow(masked)
+    plt.imshow(cutout_img)
     plt.axis("off")
     plt.title(f"Predicted class: {class_names[score]}")
     plt.show()
