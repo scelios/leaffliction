@@ -25,7 +25,3 @@ images :
 	wget -O file/leaves.zip https://cdn.intra.42.fr/document/document/39824/leaves.zip
 	unzip file/leaves.zip -d file
 	rm -r file/leaves.zip
-
-.PHONY: package
-package : train
-	# write something to zip the outputs, augmented_directory and leaffliction.keras
