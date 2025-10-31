@@ -110,7 +110,7 @@ def color_histogram(img):
     return hist_data1
 
 
-def extract_outline_mask(img, threshold=130, min_size=1000):
+def extract_outline_mask(img):
     fill_mask = mask(img)
 
     # Extract contour with maks
