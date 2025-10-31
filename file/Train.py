@@ -45,6 +45,7 @@ def train(epochs, train_dir: Path, validation_dir: Path, batch_size=32):
     validation_ds = validation_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
     model = ks.models.Sequential([
+        ks.layers.Input(shape=(opts["img_height"], opts["img_width"], 3)),
         ks.layers.Rescaling(1./255),
         ks.layers.Conv2D(16, 3, padding='same', activation='relu'),
         ks.layers.MaxPooling2D(),
@@ -93,7 +94,7 @@ def train(epochs, train_dir: Path, validation_dir: Path, batch_size=32):
     plt.title('Training and Validation Loss')
     plt.show()
 
-    keras_model_path = 'keras_save.keras'
+    keras_model_path = 'leaffliction.keras'
     model.save(keras_model_path)
 
 
@@ -145,11 +146,14 @@ if __name__ == "__main__":
 
         # Check if dataset is balanced, if not augment it
         if is_dir_balanced(Path(args.dataset_dir), num_validation=50) is False:
-            print("Dataset is not balanced, generating augmentd_directory")
+            print("Dataset is not balanced, generating augmented_directory")
             image_dir = str(Path(args.dataset_dir))
-            args.dataset_dir = str(Path(args.dataset_dir) /
+            args.dataset_dir = str(Path(args.dataset_dir).parent /
                                    "augmented_directory")
-            aug.main(image_dir, args.dataset_dir, 16)
+            if Path(args.dataset_dir).is_dir() is False:
+                aug.main(image_dir, args.dataset_dir, 16)
+            else:
+                print("augmented_directory exists, using this")
 
         print(f"Using dataset directory: {args.dataset_dir}")
         train_dir = Path(args.dataset_dir) / "train"

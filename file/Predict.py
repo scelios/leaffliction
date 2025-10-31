@@ -16,10 +16,6 @@ import keras as ks  # noqa: E402      -- must come after os.environ
 import tensorflow as tf  # noqa: E402 -- must come after os.environ
 
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-os.environ["KERAS_BACKEND"] = "tensorflow"
-
-
 def predict(model, predict_image_path, class_names):
     img = ks.utils.load_img(
         predict_image_path, target_size=(256, 256)
@@ -145,7 +141,7 @@ if __name__ == "__main__":
         parser.add_argument(
             "--model_path",
             type=str,
-            default="keras_save.keras",
+            default="leaffliction.keras",
             help=("model file, should be a .keras file")
         )
 
