@@ -58,14 +58,9 @@ def evaluate_model(model, data_dir):
     predictions = model.predict(infer_ds)
     y_pred = tf.argmax(predictions, axis=1).numpy()
 
-    print("y_true", y_true)
-    print("y_pred", y_pred)
-
     # Confusion matrix
     cm = skm.confusion_matrix(y_true, y_pred, labels=range(len(class_names)))
-    print("CM", cm)
     cm_norm = cm.astype("float") / cm.sum(axis=1, keepdims=True)
-    print("cm_norm", cm_norm)
 
     # Plot confusion matrix
     fig, ax = plt.subplots(figsize=(8, 6))
